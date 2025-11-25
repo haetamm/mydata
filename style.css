@@ -1,0 +1,226 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap");
+
+body {
+  height: 100%;
+  font-family: "Plus Jakarta Sans", "Times New Roman", serif;
+  background-color: white;
+}
+
+html {
+  overflow: scroll;
+  overflow-x: hidden;
+}
+::-webkit-scrollbar {
+  width: 0; /* Remove scrollbar space */
+  background: transparent; /* Optional: just make scrollbar invisible */
+}
+/* Optional: show position indicator in red */
+::-webkit-scrollbar-thumb {
+  background: #4f39f6;
+}
+
+.kontener {
+  width: 100%;
+  @media (width >= 1970px /* 1536px */) {
+    max-width: 1970px /* 1536px */;
+  }
+}
+
+.noscrollbar {
+  /* Firefox */
+  scrollbar-width: none;
+
+  /* IE dan Edge */
+  -ms-overflow-style: none;
+}
+
+/* Chrome, Safari, dan Opera */
+.noscrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+html {
+  overflow: scroll;
+  overflow-x: hidden;
+
+  /* Firefox & Edge lama → vertical ilang total */
+  scrollbar-width: none; /* ← vertical ilang */
+  -ms-overflow-style: none;
+}
+
+::-webkit-scrollbar {
+  width: 0; /* Chrome/Edge/Safari → vertical ilang */
+  height: 6px; /* horizontal kecil (6px) */
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-image: linear-gradient(to right, #4d58ef, #60a5fa);
+  border-radius: 20px;
+}
+
+/* From Uiverse.io by kennyotsu-monochromia */
+.bg-pattern {
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(
+        circle farthest-side at 0% 50%,
+        #4d58ef 23.5%,
+        rgba(255, 170, 0, 0) 0
+      )
+      21px 30px,
+    radial-gradient(
+        circle farthest-side at 0% 50%,
+        #60a5fa 24%,
+        rgba(240, 166, 17, 0) 0
+      )
+      19px 30px,
+    linear-gradient(
+        #4d58ef 14%,
+        rgba(240, 166, 17, 0) 0,
+        rgba(240, 166, 17, 0) 85%,
+        #4d58ef 0
+      )
+      0 0,
+    linear-gradient(
+        150deg,
+        #4d58ef 24%,
+        #60a5fa 0,
+        #60a5fa 26%,
+        rgba(240, 166, 17, 0) 0,
+        rgba(240, 166, 17, 0) 74%,
+        #60a5fa 0,
+        #60a5fa 76%,
+        #4d58ef 0
+      )
+      0 0,
+    linear-gradient(
+        30deg,
+        #4d58ef 24%,
+        #60a5fa 0,
+        #60a5fa 26%,
+        rgba(240, 166, 17, 0) 0,
+        rgba(240, 166, 17, 0) 74%,
+        #60a5fa 0,
+        #60a5fa 76%,
+        #4d58ef 0
+      )
+      0 0,
+    linear-gradient(90deg, #60a5fa 2%, #4d58ef 0, #4d58ef 98%, #60a5fa 0%) 0 0
+      #4d58ef;
+  background-size: 40px 60px;
+}
+
+/* WRAPPER */
+.login-wrapper {
+  width: 100%;
+  max-width: 380px;
+  position: relative;
+}
+
+/* BOX */
+.login-box {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 40px 35px;
+  /* border-radius: 18px; */
+  backdrop-filter: blur(18px);
+  /* box-shadow: 0 8px 28px rgba(0, 0, 0, 0.25); */
+  animation: fadeIn 0.7s ease;
+}
+
+/* TITLE */
+.title {
+  text-align: center;
+  font-size: 28px;
+  color: white;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+
+/* FIELD WRAPPER */
+.field {
+  position: relative;
+}
+
+/* INPUT */
+.field input {
+  width: 100%;
+  padding: 14px 0 8px;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #fff;
+  font-size: 17px;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+  transition: 0.3s;
+}
+
+/* FLOATING LABEL */
+.field label {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.6);
+  pointer-events: none;
+  transition: 0.3s;
+}
+
+/* FLOAT LABEL ACTIVE */
+.field input:focus + label,
+.field input:not(:placeholder-shown) + label {
+  top: 0px;
+  font-size: 12px;
+  color: #fff;
+}
+
+/* BORDER ANIMATION STRIP */
+.border-anim {
+  width: 0%;
+  height: 3px;
+  background: #3da5ff;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  transition: 0.4s ease;
+}
+
+/* BORDER ANIM TRIGGER */
+.field input:focus ~ .border-anim {
+  width: 100%;
+}
+
+/* LOGIN BUTTON */
+.btn-login {
+  width: 100%;
+  padding: 12px 0;
+  background: linear-gradient(90deg, #3b82f6, #a855f7);
+  border: none;
+  outline: none;
+  color: white;
+  font-size: 17px;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.25s;
+  margin-top: 5px;
+}
+
+/* BTN HOVER */
+.btn-login:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+}
+
+/* ANIMATION */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(25px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
