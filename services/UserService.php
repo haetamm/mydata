@@ -73,6 +73,24 @@ class UserService
         return $row ?: null;
     }
 
+    public function getProfile(string $id): ?array
+    {
+        $stmt = $this->pdo->prepare("
+            SELECT
+                u.id,
+                u.nama_lengkap,
+                u.username,
+                u.role_id,
+                u.level_id,
+                u.deleted_at
+            FROM users u
+            WHERE u.id = ?
+        ");
+        $stmt->execute([$id]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ?: null;
+    }
+
     public function create(array $data): array
     {
         try

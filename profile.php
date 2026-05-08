@@ -27,7 +27,7 @@ if (!$canEdit)
 
 try
 {
-    $user = $service->getById($id_user);
+    $user = $service->getProfile($id_user);
     if (!$user)
     {
         session_destroy();
