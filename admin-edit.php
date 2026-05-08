@@ -15,11 +15,11 @@ use App\Validation\UserValidation;
 
 session_start();
 
-[$menus, $permMap] = PermissionMiddleware::handle($pdo, 'master-role');
+[$menus, $permMap] = PermissionMiddleware::handle($pdo, 'master-admin');
 
-$canEdit   = PermissionService::can($permMap, 'master-role', 'edit');
-$canCreate = PermissionService::can($permMap, 'master-role', 'create');
-$canDelete = PermissionService::can($permMap, 'master-role', 'delete');
+$canEdit   = PermissionService::can($permMap, 'master-admin', 'edit');
+$canCreate = PermissionService::can($permMap, 'master-admin', 'create');
+$canDelete = PermissionService::can($permMap, 'master-admin', 'delete');
 
 $service           = new UserService($pdo);
 $roleService       = new RoleService($pdo);
@@ -47,7 +47,7 @@ $defaultForm = [
 
 if ($formMode === 'create' && !$canCreate)
 {
-    header('Location: user.php');
+    header('Location: admin.php');
     exit;
 }
 
