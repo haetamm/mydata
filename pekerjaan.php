@@ -1,75 +1,112 @@
 <?php
+
+declare(strict_types=1);
+
+require_once 'vendor/autoload.php';
+require_once 'lib/connection.php';
+require_once 'lib/utils.php';
+
+use App\Middleware\PermissionMiddleware;
+use App\Services\PekerjaanService;
+use App\Services\PermissionService;
+use App\Validation\MasterValidation;
+
 session_start();
-include("connection.php");
-include("services/master.php");
 
-// === 1. CEK LOGIN & HAK AKSES ===
-allowSuperAdminOnly();
+// Guard
+[$menus, $permMap] = PermissionMiddleware::handle($pdo, 'master-pkrj');
 
-$pesan = $_GET["pesan"] ?? "";
+$pekerjaanService = new PekerjaanService($pdo);
+$servicePermission = new PermissionService($pdo);
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['action']) && $_GET['action'] === 'add_pekerjaan')
+$canCreate = $servicePermission->can($permMap, 'master-pkrj', 'create');
+$canDelete = $servicePermission->can($permMap, 'master-pkrj', 'delete');
+
+$pesan            = $_GET['pesan'] ?? '';
+$errors           = [];
+
+// POST: Tambah pekerjaan
+if (
+    $_SERVER['REQUEST_METHOD'] === 'POST'
+    && isset($_GET['action'])
+    && $_GET['action'] === 'add_pekerjaan'
+    && $canCreate
+)
 {
-    if (isset($_POST['nama_pekerjaan']) && !empty(trim($_POST['nama_pekerjaan'])))
-    {
-        $nama_pekerjaan = trim($_POST['nama_pekerjaan']);
-        $result = addPekerjaan($nama_pekerjaan, $link);
+    $data   = ['nama' => trim($_POST['nama_pekerjaan'] ?? '')];
+    $errors = MasterValidation::save($data);
 
-        if ($result['success'])
-        {
-            header("Location: pekerjaan.php?pesan=" . urlencode($result['message']));
-        }
-        else
-        {
-            echo "<script>alert('" . addslashes($result['message']) . "'); window.location.href = 'pekerjaan.php';</script>";
-        }
-        exit;
-    }
-    else
+    if (empty($errors))
     {
-        echo "<script>alert('Nama pekerjaan tidak boleh kosong'); window.location.href = 'pekerjaan.php';</script>";
+        try
+        {
+            $res = $pekerjaanService->addPekerjaan($data['nama']);
+            $_SESSION['swal'] = [
+                'icon'  => $res['success'] ? 'success' : 'error',
+                'title' => $res['success'] ? 'Berhasil!' : 'Gagal',
+                'html'  => $res['message'],
+            ];
+
+            header('Location: pekerjaan.php');
+        }
+        catch (\Throwable $e)
+        {
+            error_log(date('[Y-m-d H:i:s] ') . $e->getMessage() . PHP_EOL, 3, __DIR__ . '/logs/error.log');
+            header('Location: pekerjaan.php?pesan=' . urlencode('Terjadi kesalahan sistem.'));
+        }
         exit;
     }
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_id']))
+// POST: Hapus pekerjaan
+if (
+    $_SERVER['REQUEST_METHOD'] === 'POST'
+    && isset($_POST['delete_id'])
+    && $canDelete
+)
 {
+    $deleteId = (int) $_POST['delete_id'];
     try
     {
-        $result = deletePekerjaan($_POST['delete_id'], $link);
+        $res = $pekerjaanService->deletePekerjaan($deleteId);
+        $_SESSION['swal'] = [
+            'icon'  => $res['success'] ? 'success' : 'error',
+            'title' => $res['success'] ? 'Berhasil!' : 'Gagal',
+            'html'  => $res['message'],
+        ];
 
-        if ($result['success'])
-        {
-            header("Location: pekerjaan.php?pesan=" . urlencode($result['message']));
-        }
-        else
-        {
-            echo "<script>alert('" . addslashes($result['message']) . "'); window.location.href = 'pekerjaan.php';</script>";
-        }
-        exit;
+        header('Location: pekerjaan.php');
     }
-    catch (Exception $e)
+    catch (\Throwable $e)
     {
-        echo "<script>alert('Error sistem: " . addslashes($e->getMessage()) . "'); window.location.href = 'pekerjaan.php';</script>";
-        exit;
+        error_log(date('[Y-m-d H:i:s] ') . $e->getMessage() . PHP_EOL, 3, __DIR__ . '/logs/error.log');
+        header('Location: pekerjaan.php?pesan=' . urlencode('Terjadi kesalahan sistem.'));
     }
+    exit;
 }
 
-// GET DATA
-$result = getPekerjaan($link);
-$dataPekerjaan   = $result["data"];
-$dataMaster = array_map(function ($item)
+// GET data
+$dataPekerjaan  = [];
+$fetchError = null;
+
+try
 {
-    return [
-        "id_master"   => $item["id_pekerjaan"],
-        "nama_master" => $item["nama_pekerjaan"],
-    ];
-}, $dataPekerjaan);
+    $dataPekerjaan = $pekerjaanService->getAll();
+}
+catch (\Throwable $e)
+{
+    $fetchError = 'Terjadi kesalahan dalam mengambil data.';
+    error_log(date('[Y-m-d H:i:s] ') . $e->getMessage() . PHP_EOL, 3, __DIR__ . '/logs/error.log');
+}
+
+$dataMaster = array_map(fn($item) => [
+    'id_master'   => $item['id_pekerjaan'],
+    'nama_master' => $item['nama_pekerjaan'],
+], $dataPekerjaan);
 
 ?>
 
 <?php include("layout/head.php") ?>
-
 <div class="kontener mx-auto">
     <div class="h-screen grid grid-cols-1 xs:grid-cols-[70px_1fr] xl:grid-cols-[180px_1fr]">
         <!-- Sidebar -->
@@ -89,8 +126,8 @@ $dataMaster = array_map(function ($item)
                         class="col-span-6 p-3 pb-[120px] xs:pb-10 lg:pb-4 lg:col-span-5 bg-white md:rounded-sm xl:rounded-lg overflow-hidden flex flex-col">
                         <div class=" flex-1 flex flex-col">
 
-                            <!-- Pesan -->
-                            <?php include("components/flash_message.php") ?>
+                            <!-- Error fetch -->
+                            <?php include('components/feedback_error.php') ?>
 
                             <!-- Form Tambah -->
                             <?php
@@ -113,3 +150,4 @@ $dataMaster = array_map(function ($item)
         </div>
     </div>
 </div>
+<?php include('layout/footer.php') ?>

@@ -1,131 +1,115 @@
 <?php
+
+declare(strict_types=1);
+require_once 'vendor/autoload.php';
+require_once 'lib/connection.php';
+require_once 'lib/utils.php';
+
+use App\Middleware\PermissionMiddleware;
+use App\Services\PermissionService;
+use App\Services\UserService;
+use App\Validation\ProfileValidation;
+
 session_start();
-include("connection.php");
-include("services/user.php");
 
-// === CEK LOGIN ===
-if (!isset($_SESSION["id_user"]))
-{
-    header("Location: login.php");
-    exit;
-}
-
-$id_user = $_SESSION["id_user"];
+[$menus, $permMap] = PermissionMiddleware::handle($pdo, 'setting-profil');
+$canEdit = PermissionService::can($permMap, 'setting-profil', 'edit');
+$service = new UserService($pdo);
+$id_user = $_SESSION['id_user'];
 $errors  = [];
 $post    = [];
 
-// === AMBIL DATA USER ===
+if (!$canEdit)
+{
+    header('Location: ' . getRedirectAfterLogin($_SESSION));
+    exit;
+}
+
 try
 {
-    $user = getUserCurrent($id_user, $link);
+    $user = $service->getById($id_user);
     if (!$user)
     {
         session_destroy();
-        header("Location: login.php");
+        header('Location: /');
         exit;
     }
 }
-catch (Exception $e)
+catch (\Throwable $e)
 {
-    die("Error: " . $e->getMessage());
+    error_log(date('[Y-m-d H:i:s] ') . $e->getMessage() . PHP_EOL, 3, __DIR__ . '/logs/error.log');
+    $_SESSION['swal'] = [
+        'icon'  => 'error',
+        'title' => 'Gagal',
+        'html'  => 'Terjadi kesalahan saat memuat data.',
+    ];
+    header('Location: ' . getRedirectAfterLogin($_SESSION));
+    exit;
 }
 
-// === PROSES UPDATE ===
 if ($_SERVER['REQUEST_METHOD'] === 'POST')
 {
-    $post = $_POST;
+    $post = array_map(fn($v) => is_string($v) ? trim($v) : $v, $_POST);
 
-    foreach ($post as $k => $v)
-    {
-        $post[$k] = is_string($v) ? trim($v) : $v;
-    }
+    $errors = ProfileValidation::save($post, false);
 
-    // VALIDASI
-    if (empty($post['nama_lengkap'])) $errors['nama_lengkap'] = "Wajib diisi.";
-    if (empty($post['username'])) $errors['username'] = "Wajib diisi.";
-
-    if (strlen($post['username']) < 4)
-        $errors['username'] = "Username minimal 4 karakter.";
-
-    if (!empty($post['password']))
-    {
-        if (strlen($post['password']) < 6)
-        {
-            $errors['password'] = "Password minimal 6 karakter.";
-        }
-        if (
-            !preg_match("/[A-Za-z]/", $post['password']) ||
-            !preg_match("/[0-9]/", $post['password'])
-        )
-        {
-            $errors['password'] = "Password harus mengandung huruf & angka.";
-        }
-        if ($post['password'] !== $post['password2'])
-        {
-            $errors['password2'] = "Konfirmasi tidak cocok.";
-        }
-    }
-
-    // === EKSEKUSI UPDATE ===
     if (empty($errors))
     {
-        try
-        {
-            // cek username
-            if (isUsernameTaken($post['username'], $id_user, $link))
-            {
-                $errors['username'] = "Username sudah digunakan!";
-            }
-            else
-            {
-                // update
-                updateUserProfile($id_user, $post, $link);
+        $data = [
+            'nama_lengkap' => $post['nama_lengkap'],
+            'username'     => $post['username'],
+            'password'     => $post['password'] ?? '',
+            'role_id'      => $user['role_id'],
+            'level_id'     => $user['level_id'],
+        ];
 
-                // update session
-                $_SESSION['nama'] = $post['nama_lengkap'];
-                $_SESSION['username'] = $post['username'];
+        $res = $service->update($id_user, $data);
 
-                $_SESSION['msg_success'] = "Profil berhasil diperbarui!";
-                header("Location: profile.php");
-                exit;
-            }
-        }
-        catch (PDOException $e)
+        $_SESSION['swal'] = [
+            'icon'  => $res['success'] ? 'success' : 'error',
+            'title' => $res['success'] ? 'Berhasil!' : 'Gagal',
+            'html'  => $res['message'],
+        ];
+
+        if ($res['success'])
         {
-            $errors['global'] = $e->getMessage();
+            // Update session nama jika berhasil
+            $_SESSION['nama'] = $post['nama_lengkap'];
+            header('Location: profile.php');
+            exit;
         }
     }
 }
 
-// default value
-$post = $post ?: [
+$post = !empty($post) ? $post : [
     'nama_lengkap' => $user['nama_lengkap'],
-    'username'     => $user['username']
+    'username'     => $user['username'],
+    'password'     => '',
 ];
+
+$disabled = !$canEdit ? 'disabled' : '';
 ?>
-
-
-<?php include("layout/head.php") ?>
-
+<?php include('layout/head.php') ?>
 <div class="kontener mx-auto">
     <div class="h-screen grid grid-cols-1 xs:grid-cols-[70px_1fr] xl:grid-cols-[180px_1fr]">
-
-        <?php include("layout/sidebar.php") ?>
-
+        <?php include('layout/sidebar.php') ?>
         <div class="h-screen overflow-auto no-scrollbar">
             <div class="pt-5 pb-[120px] px-3 sm:px-4 lg:px-3 xs:pb-20 md:pb-5">
-                <div class=" mx-auto">
+                <div class="mx-auto">
                     <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
-                        <?php $title = 'Profil Pengguna';
-                        $back = '';
-                        $icon = "fa-user-pen";
+                        <?php
+                        $title    = 'Profil Pengguna';
+                        $back     = '';
+                        $icon     = 'fa-user-pen';
                         $subtitle = 'Perbarui data Anda';
-                        include("components/form_header.php") ?>
+                        include('components/form_header.php');
+                        ?>
 
-                        <?php include("components/form_profile.php") ?>
+                        <?php include('components/form_profile.php') ?>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+<?php include('layout/footer.php') ?>

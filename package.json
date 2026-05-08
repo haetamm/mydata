@@ -1,0 +1,35 @@
+{
+  "name": "mydata",
+  "version": "1.0.0",
+  "description": "```sh\r copy edit database credentials in connection.php\r ```",
+  "homepage": "https://github.com/haetamm/mydata#readme",
+  "bugs": {
+    "url": "https://github.com/haetamm/mydata/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/haetamm/mydata.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "script.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "copy-cash": "cp node_modules/cash-dom/dist/cash.min.js assets/js/",
+    "copy-sweetalert2": "cp node_modules/sweetalert2/dist/sweetalert2.min.css assets/css/ && cp node_modules/sweetalert2/dist/sweetalert2.all.min.js assets/js/",
+    "build-tailwind": "npx tailwindcss -i ./input.css -o ./assets/css/output.css --minify",
+    "watch-tailwind": "npx tailwindcss -i ./input.css -o ./assets/css/output.css --watch",
+    "build": "npm run copy-cash && npm run copy-sweetalert2 && npm run build-tailwind",
+    "dev": "npm run copy-cash && npm run copy-sweetalert2 && npm run watch-tailwind"
+  },
+  "dependencies": {
+    "cash-dom": "^8.1.5",
+    "sweetalert2": "^11.26.24"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.2.4"
+  }
+}

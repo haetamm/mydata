@@ -1,14 +1,16 @@
+<?php
+$inp      = fn(string $f) => htmlspecialchars($post[$f] ?? '');
+$err      = fn(string $f) => !empty($errors[$f])
+    ? '<p class="text-red-500 text-xs mt-1.5">' . htmlspecialchars($errors[$f]) . '</p>'
+    : '';
+$hasError = fn(string $f) => !empty($errors[$f])
+    ? 'border-red-500 ring-1 ring-red-200'
+    : 'border-gray-200';
+?>
 <div class="bg-white shadow-lg rounded-b-xl p-5 sm:p-8">
-    <?php if (isset($_SESSION['msg_success'])): ?>
-        <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6">
-            <?= htmlspecialchars($_SESSION['msg_success']) ?>
-        </div>
-        <?php unset($_SESSION['msg_success']); ?>
-    <?php endif; ?>
 
     <form method="POST" class="space-y-8 w-full mx-auto">
 
-        <!-- DATA PRIBADI -->
         <div class="border-b pb-8 border-slate-200">
             <h2 class="text-2xl font-bold text-blue-700 mb-6">Informasi Akun</h2>
 
@@ -21,9 +23,9 @@
                     </label>
                     <div class="w-full">
                         <input type="text" name="nama_lengkap" required
-                            value="<?= htmlspecialchars($post['nama_lengkap'] ?? '') ?>"
-                            class="w-full px-4 py-2.5 border <?= !empty($errors['nama_lengkap']) ? 'border-red-500' : 'border-gray-300' ?> rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <?php field_error('nama_lengkap', $errors); ?>
+                            value="<?= $inp('nama_lengkap') ?>"
+                            class="w-full px-4 py-2.5 border <?= $hasError('nama_lengkap') ?> rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <?= $err('nama_lengkap') ?>
                     </div>
                 </div>
 
@@ -34,13 +36,11 @@
                     </label>
                     <div class="w-full">
                         <input type="text" name="username" required minlength="4"
-                            value="<?= htmlspecialchars($post['username'] ?? '') ?>"
-                            class="w-full px-4 py-2.5 border <?= !empty($errors['username']) ? 'border-red-500' : 'border-gray-300' ?> rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <?php field_error('username', $errors); ?>
+                            value="<?= $inp('username') ?>"
+                            class="w-full px-4 py-2.5 border <?= $hasError('username') ?> rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <?= $err('username') ?>
                     </div>
                 </div>
-
-
 
                 <!-- Password Baru -->
                 <div class="xl:flex xl:items-center">
@@ -49,8 +49,8 @@
                     </label>
                     <div class="w-full">
                         <input type="password" name="password" placeholder="Kosongkan jika tidak ingin ganti"
-                            class="w-full px-4 py-2.5 border <?= !empty($errors['password']) ? 'border-red-500' : 'border-gray-300' ?> rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <?php field_error('password', $errors); ?>
+                            class="w-full px-4 py-2.5 border <?= $hasError('password') ?> rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <?= $err('password') ?>
                     </div>
                 </div>
 
@@ -60,21 +60,9 @@
                         Konfirmasi Password
                     </label>
                     <div class="w-full">
-                        <input type="password" name="password2"
-                            class="w-full px-4 py-2.5 border <?= !empty($errors['password2']) ? 'border-red-500' : 'border-gray-300' ?> rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <?php field_error('password2', $errors); ?>
-                    </div>
-                </div>
-
-                <!-- Akses -->
-                <div class="xl:flex xl:items-center">
-                    <label class="block w-full xl:w-[30%] text-sm font-semibold text-gray-700 mb-2">
-                        Akses
-                    </label>
-                    <div class="w-full">
-                        <input type="text"
-                            value="<?= $user['jenjang'] ? htmlspecialchars($user['jenjang']) : 'Semua Jenjang (Super Admin)' ?>"
-                            class="w-full px-4 py-2.5 border border-gray-300 bg-gray-50 text-gray-600 rounded-lg" disabled>
+                        <input type="password" name="password_konfirmasi"
+                            class="w-full px-4 py-2.5 border <?= $hasError('password_konfirmasi') ?> rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <?= $err('password_konfirmasi') ?>
                     </div>
                 </div>
 

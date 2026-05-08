@@ -1,4 +1,4 @@
-<div class="mt-4 lg:hidden">
+<div class="my-4 lg:hidden">
     <div class="text-white px-6 py-4 text-center rounded-lg shadow-xl border border-white/20
         bg-linear-to-r from-[#4d58ef] to-blue-400
         backdrop-blur-sm">

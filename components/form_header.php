@@ -1,5 +1,5 @@
+<?php $back = $back ?? null; ?>
 <div class="bg-linear-to-r from-[#4d58ef] to-blue-400 text-white p-4 sm:p-6 text-center relative min-h-[120px] flex items-center justify-center">
-
     <?php if ($back): ?>
         <a href="<?= $back ?>"
             class="absolute left-2 z-10 sm:left-4 md:left-6 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 rounded-lg px-3 py-1.5 sm:px-4 sm:py-2 transition-all flex items-center gap-1 sm:gap-2 backdrop-blur-sm border border-white/10 text-white text-xs sm:text-sm">

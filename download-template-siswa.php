@@ -1,333 +1,432 @@
 <?php
+
+declare(strict_types=1);
+
+require_once 'vendor/autoload.php';
+require_once 'lib/connection.php';
+require_once 'lib/utils.php';
+
+use App\Middleware\PermissionMiddleware;
+use App\Services\AgamaService;
+use App\Services\KelasService;
+use App\Services\PekerjaanService;
+use App\Services\PermissionService;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
+
+$agamaService    = new AgamaService($pdo);
+$pekerjaanService = new PekerjaanService($pdo);
+$kelasService    = new KelasService($pdo);
+
 session_start();
-include("connection.php");
 
-allowSuperAdminOnly();
-
-$jenjang = strtolower($_GET['jenjang'] ?? '');
-
+$jenjang = strtolower(trim($_GET['jenjang'] ?? ''));
 if (!in_array($jenjang, ['sd', 'smp', 'sma']))
 {
-    die("Jenjang tidak valid!");
+    header('Location: /');
+    exit;
 }
 
 $jenjangUp = strtoupper($jenjang);
-$pdo = $link;
 
-// Ambil data referensi
-$agama      = $pdo->query("SELECT id_agama, nama_agama FROM master_agama WHERE deleted_at IS NULL ORDER BY id_agama")->fetchAll(PDO::FETCH_ASSOC);
-$semester   = $pdo->query("SELECT id_semester, nama_semester FROM master_semester WHERE deleted_at IS NULL ORDER BY id_semester")->fetchAll(PDO::FETCH_ASSOC);
-$tahun      = $pdo->query("SELECT id_tahun, tahun FROM master_tahun_pelajaran WHERE deleted_at IS NULL ORDER BY id_tahun DESC")->fetchAll(PDO::FETCH_ASSOC);
-$pekerjaan  = $pdo->query("SELECT id_pekerjaan, nama_pekerjaan FROM master_pekerjaan WHERE deleted_at IS NULL ORDER BY id_pekerjaan")->fetchAll(PDO::FETCH_ASSOC);
-$kelas      = $pdo->query("SELECT k.id_kelas, k.nama_kelas FROM master_kelas k JOIN master_level_kelas l ON k.level_id = l.id_level WHERE l.jenjang = '$jenjangUp' AND k.deleted_at IS NULL ORDER BY k.nama_kelas")->fetchAll(PDO::FETCH_ASSOC);
+[$menus, $permMap] = PermissionMiddleware::handle($pdo, 'siswa-' . $jenjang);
 
-// Buat direktori temporary
-$tempDir = sys_get_temp_dir() . '/excel_' . uniqid();
-mkdir($tempDir, 0777, true);
+if (!PermissionService::can($permMap, 'siswa-' . $jenjang, 'import'))
+{
+    denyAccess('Anda tidak diizinkan mengunduh template.');
+}
 
-// Struktur folder Excel
-$xlDir = $tempDir . '/xl';
-$worksheetsDir = $xlDir . '/worksheets';
-$relsDir = $tempDir . '/_rels';
-$xlRelsDir = $xlDir . '/_rels';
+$agama     = $agamaService->getAll();
+$pekerjaan = $pekerjaanService->getAll();
+$kelas     = $kelasService->getByJenjang($jenjang);
 
-mkdir($xlDir, 0777, true);
-mkdir($worksheetsDir, 0777, true);
-mkdir($relsDir, 0777, true);
-mkdir($xlRelsDir, 0777, true);
+// ─── Colour palette ───────────────────────────────────────────────────────────
+const C_BRAND      = '4D58EF';
+const C_BRAND_BG   = 'EEF0FF';
+const C_WHITE      = 'FFFFFF';
+const C_AMBER      = 'F59E0B';
+const C_BORDER     = 'BFBFBF';
+const C_REF_BORDER = 'C7D2FE';
+const C_REF_BG     = 'EEF2FF';
+const C_REF_HDR    = '6366F1';
+const C_NOTE       = '6B7280';
 
-// ==================== FILE UTAMA ====================
+// ─── Style helpers ────────────────────────────────────────────────────────────
 
-// 1. [Content_Types].xml
-$contentTypes = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-    <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-    <Default Extension="xml" ContentType="application/xml"/>
-    <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
-    <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
-    <Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
-    <Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/>
-</Types>';
-file_put_contents($tempDir . '/[Content_Types].xml', $contentTypes);
+/**
+ * Returns a PhpSpreadsheet style array for a bordered data cell.
+ * $textFormat = true → force "@" (text) number format.
+ */
+function cellStyle(bool $center = false, bool $textFormat = false): array
+{
+    $style = [
+        'font'      => ['name' => 'Arial', 'size' => 10],
+        'borders'   => [
+            'allBorders' => [
+                'borderStyle' => Border::BORDER_THIN,
+                'color'       => ['argb' => 'FF' . C_BORDER],
+            ],
+        ],
+    ];
+    if ($center)
+    {
+        $style['alignment'] = ['horizontal' => Alignment::HORIZONTAL_CENTER];
+    }
+    if ($textFormat)
+    {
+        $style['numberFormat'] = ['formatCode' => NumberFormat::FORMAT_TEXT];
+    }
+    return $style;
+}
 
-// 2. _rels/.rels
-$rels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-    <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
-</Relationships>';
-file_put_contents($relsDir . '/.rels', $rels);
+function refCellStyle(bool $center = false, bool $altRow = false, bool $boldBlue = false): array
+{
+    $style = [
+        'font'    => [
+            'name' => 'Arial',
+            'size' => 10,
+            'bold'  => $boldBlue,
+            'color' => ['argb' => $boldBlue ? 'FF' . C_BRAND : 'FF000000'],
+        ],
+        'borders' => [
+            'allBorders' => [
+                'borderStyle' => Border::BORDER_THIN,
+                'color'       => ['argb' => 'FF' . C_REF_BORDER],
+            ],
+        ],
+    ];
+    if ($altRow)
+    {
+        $style['fill'] = [
+            'fillType'   => Fill::FILL_SOLID,
+            'startColor' => ['argb' => 'FF' . C_REF_BG],
+        ];
+    }
+    if ($center)
+    {
+        $style['alignment'] = ['horizontal' => Alignment::HORIZONTAL_CENTER];
+    }
+    return $style;
+}
 
-// 3. xl/workbook.xml
-$workbook = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-    <sheets>
-        <sheet name="Upload" sheetId="1" r:id="rId1"/>
-        <sheet name="Daftar ID" sheetId="2" r:id="rId2"/>
-    </sheets>
-</workbook>';
-file_put_contents($xlDir . '/workbook.xml', $workbook);
-
-// 4. xl/_rels/workbook.xml.rels
-$workbookRels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-    <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
-    <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/>
-    <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/>
-</Relationships>';
-file_put_contents($xlRelsDir . '/workbook.xml.rels', $workbookRels);
-
-// 5. xl/sharedStrings.xml - Kumpulkan semua teks
-$sharedStrings = [];
-$stringIndex = 0;
-
-// Header untuk sheet Upload
+// ─── Column definitions ───────────────────────────────────────────────────────
 $headers = [
-    "No",
-    "Nama",
-    "NIS",
-    "NISN",
-    "NIK",
-    "Tempat Lahir",
-    "Tanggal Lahir (YYYY-MM-DD)",
-    "ID Agama",
-    "ID Kelas",
-    "Ruang",
-    "ID Semester",
-    "ID Tahun Pelajaran",
-    "Alamat",
-    "RT/RW",
-    "Dusun",
-    "Kelurahan",
-    "Kecamatan",
-    "Kode Pos",
-    "Nama Ayah",
-    "Thn Lahir Ayah",
-    "Pendidikan Ayah",
-    "ID Pekerjaan Ayah",
-    "Penghasilan Ayah",
-    "NIK Ayah",
-    "Nama Ibu",
-    "Thn Lahir Ibu",
-    "Pendidikan Ibu",
-    "ID Pekerjaan Ibu",
-    "Penghasilan Ibu",
-    "NIK Ibu",
-    "Nama Wali",
-    "Thn Lahir Wali",
-    "Pendidikan Wali",
-    "ID Pekerjaan Wali",
-    "Penghasilan Wali",
-    "NIK Wali"
+    'No',
+    'Nama *',
+    'NIS',
+    'NISN',
+    'NIK',
+    'Tempat Lahir',
+    'Tanggal Lahir (YYYY-MM-DD)',
+    'ID Agama *',
+    'ID Kelas *',
+    'Ruang *',
+    'Tahun Masuk',
+    'Alamat',
+    'RT/RW',
+    'Dusun',
+    'Kelurahan',
+    'Kecamatan',
+    'Kode Pos',
+    'Nama Ayah',
+    'Thn Lahir Ayah',
+    'Pendidikan Ayah',
+    'ID Pekerjaan Ayah',
+    'Penghasilan Ayah',
+    'NIK Ayah',
+    'Nama Ibu',
+    'Thn Lahir Ibu',
+    'Pendidikan Ibu',
+    'ID Pekerjaan Ibu',
+    'Penghasilan Ibu',
+    'NIK Ibu',
+    'Nama Wali',
+    'Thn Lahir Wali',
+    'Pendidikan Wali',
+    'ID Pekerjaan Wali',
+    'Penghasilan Wali',
+    'NIK Wali',
 ];
 
-foreach ($headers as $header)
+// Column widths in characters (approximate Excel unit)
+$colWidths = [
+    4,   // No
+    22,  // Nama
+    12,  // NIS
+    14,  // NISN
+    19,  // NIK
+    16,  // Tempat Lahir
+    18,  // Tanggal Lahir
+    10,  // ID Agama
+    10,  // ID Kelas
+    7,   // Ruang
+    11,  // Tahun Masuk
+    22,  // Alamat
+    10,  // RT/RW
+    12,  // Dusun
+    13,  // Kelurahan
+    13,  // Kecamatan
+    10,  // Kode Pos
+    22,  // Nama Ayah
+    14,  // Thn Lahir Ayah
+    16,  // Pendidikan Ayah
+    16,  // ID Pekerjaan Ayah
+    16,  // Penghasilan Ayah
+    19,  // NIK Ayah
+    22,  // Nama Ibu
+    14,  // Thn Lahir Ibu
+    16,  // Pendidikan Ibu
+    16,  // ID Pekerjaan Ibu
+    16,  // Penghasilan Ibu
+    19,  // NIK Ibu
+    22,  // Nama Wali
+    14,  // Thn Lahir Wali
+    16,  // Pendidikan Wali
+    16,  // ID Pekerjaan Wali
+    16,  // Penghasilan Wali
+    19,  // NIK Wali
+];
+
+// Kolom yang harus diformat sebagai Text (0-indexed)
+// NIS(2), NISN(3), NIK(4), RT/RW(12), Kode Pos(16), NIK Ayah(22), NIK Ibu(28), NIK Wali(34)
+$textColIndexes = [2, 3, 4, 12, 16, 22, 28, 34];
+
+// Required columns (0-indexed): No(0), Nama*(1), ID Agama*(7), ID Kelas*(8), Ruang*(9)
+$requiredColIndexes = [0, 1, 7, 8, 9];
+
+$totalCols = count($headers);
+
+// ─── Build Spreadsheet ────────────────────────────────────────────────────────
+$spreadsheet = new Spreadsheet();
+$spreadsheet->getProperties()
+    ->setCreator('Sistem Akademik')
+    ->setTitle('Template Upload Siswa ' . $jenjangUp);
+
+// ═════════════════════════════════════════════════════════════════════════════
+// SHEET 1 — Upload
+// ═════════════════════════════════════════════════════════════════════════════
+$ws = $spreadsheet->getActiveSheet();
+$ws->setTitle('Upload');
+
+// Set column widths
+foreach ($colWidths as $i => $w)
 {
-    $sharedStrings[$stringIndex++] = $header;
+    $ws->getColumnDimensionByColumn($i + 1)->setWidth($w);
 }
 
-// Data referensi untuk sheet Daftar ID - BUAT JUDUL YANG UNIK
-$sharedStrings[$stringIndex++] = "DAFTAR REFERENSI UNTUK JENJANG " . $jenjangUp;
-$sharedStrings[$stringIndex++] = "ID";
-$sharedStrings[$stringIndex++] = "Nama";
+// ── Row 1: Title ──────────────────────────────────────────────────────────────
+$lastCol = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($totalCols);
 
-// JUDUL UNIK UNTUK SETIAP TABEL
-$sharedStrings[$stringIndex++] = "AGAMA";
-$sharedStrings[$stringIndex++] = "KELAS " . $jenjangUp;
-$sharedStrings[$stringIndex++] = "SEMESTER";
-$sharedStrings[$stringIndex++] = "TAHUN PELAJARAN";
-$sharedStrings[$stringIndex++] = "PEKERJAAN ORANG TUA / WALI";
+$ws->mergeCells('A1:' . $lastCol . '1');
+$ws->setCellValue('A1', 'TEMPLATE UPLOAD SISWA ' . $jenjangUp . ' — ' . date('d/m/Y'));
+$ws->getRowDimension(1)->setRowHeight(24);
+$ws->getStyle('A1')->applyFromArray([
+    'font'      => ['name' => 'Arial', 'size' => 11, 'bold' => true, 'color' => ['argb' => 'FF' . C_BRAND]],
+    'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['argb' => 'FF' . C_BRAND_BG]],
+    'alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT, 'vertical' => Alignment::VERTICAL_CENTER],
+]);
 
-// Agama
-foreach ($agama as $a)
+// ── Row 2: Note ───────────────────────────────────────────────────────────────
+$ws->mergeCells('A2:' . $lastCol . '2');
+$ws->setCellValue('A2', '* Kolom bertanda bintang wajib diisi. Gunakan ID dari sheet "Daftar ID" untuk kolom ID Agama, ID Kelas, dan ID Pekerjaan.');
+$ws->getRowDimension(2)->setRowHeight(16);
+$ws->getStyle('A2')->applyFromArray([
+    'font'      => ['name' => 'Arial', 'size' => 9, 'italic' => true, 'color' => ['argb' => 'FF' . C_NOTE]],
+    'alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT],
+]);
+
+// ── Row 3: Spacer ─────────────────────────────────────────────────────────────
+$ws->getRowDimension(3)->setRowHeight(8);
+
+// ── Row 4: Headers ────────────────────────────────────────────────────────────
+$ws->getRowDimension(4)->setRowHeight(30);
+foreach ($headers as $i => $label)
 {
-    $sharedStrings[$stringIndex++] = $a['nama_agama'];
+    $col   = $i + 1;
+    $coord = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col) . '4';
+    $ws->setCellValue($coord, $label);
+
+    $isReq = in_array($i, $requiredColIndexes, true);
+    $ws->getStyle($coord)->applyFromArray([
+        'font'      => [
+            'name'  => 'Arial',
+            'size'  => 10,
+            'bold'  => true,
+            'color' => ['argb' => 'FF' . C_WHITE],
+        ],
+        'fill'      => [
+            'fillType'   => Fill::FILL_SOLID,
+            'startColor' => ['argb' => 'FF' . ($isReq ? C_AMBER : C_BRAND)],
+        ],
+        'alignment' => [
+            'horizontal' => Alignment::HORIZONTAL_CENTER,
+            'vertical'   => Alignment::VERTICAL_CENTER,
+            'wrapText'   => true,
+        ],
+        'borders'   => [
+            'allBorders' => [
+                'borderStyle' => Border::BORDER_THIN,
+                'color'       => ['argb' => 'FF' . C_WHITE],
+            ],
+        ],
+    ]);
 }
 
-// Kelas
-foreach ($kelas as $k)
+// ── Rows 5–104: Data rows (100 rows) ─────────────────────────────────────────
+for ($r = 1; $r <= 100; $r++)
 {
-    $sharedStrings[$stringIndex++] = $k['nama_kelas'];
-}
+    $excelRow = $r + 4; // offset: title(1) + note(2) + spacer(3) + header(4)
+    $ws->getRowDimension($excelRow)->setRowHeight(18);
 
-// Semester
-foreach ($semester as $s)
-{
-    $sharedStrings[$stringIndex++] = $s['nama_semester'];
-}
+    // Column A: row number (centered)
+    $ws->setCellValue('A' . $excelRow, $r);
+    $ws->getStyle('A' . $excelRow)->applyFromArray(cellStyle(true));
 
-// Tahun
-foreach ($tahun as $t)
-{
-    $sharedStrings[$stringIndex++] = $t['tahun'];
-}
-
-// Pekerjaan
-foreach ($pekerjaan as $p)
-{
-    $sharedStrings[$stringIndex++] = $p['nama_pekerjaan'];
-}
-
-// Build sharedStrings.xml
-$sharedStringsXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="' . count($sharedStrings) . '" uniqueCount="' . count($sharedStrings) . '">';
-foreach ($sharedStrings as $string)
-{
-    $sharedStringsXml .= '<si><t>' . htmlspecialchars($string) . '</t></si>';
-}
-$sharedStringsXml .= '</sst>';
-file_put_contents($xlDir . '/sharedStrings.xml', $sharedStringsXml);
-
-// Helper function untuk konversi kolom
-function numToAlpha($n)
-{
-    $r = '';
-    for ($i = $n; $i >= 0; $i = (int)($i / 26) - 1)
+    // Remaining columns
+    for ($col = 1; $col < $totalCols; $col++)
     {
-        $r = chr($i % 26 + 65) . $r;
+        $isText  = in_array($col, $textColIndexes, true);
+        $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col + 1);
+        $coord   = $colLetter . $excelRow;
+
+        // Force cell type to string so leading zeros are preserved
+        $ws->getCell($coord)->setValueExplicit('', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+        $ws->getStyle($coord)->applyFromArray(cellStyle(false, $isText));
     }
-    return $r;
 }
 
-// 6. SHEET 1: Upload
-$sheet1 = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-    <sheetData>';
+// ═════════════════════════════════════════════════════════════════════════════
+// SHEET 2 — Daftar ID
+// ═════════════════════════════════════════════════════════════════════════════
+$ws2 = $spreadsheet->createSheet();
+$ws2->setTitle('Daftar ID');
 
-// Header row
-$sheet1 .= '<row r="1">';
-foreach ($headers as $col => $header)
+// Column widths: ID | Nama | gap | ID | Nama | gap | ID | Nama
+$refWidths = [8, 25, 4, 8, 25, 4, 8, 25];
+foreach ($refWidths as $i => $w)
 {
-    $cellRef = numToAlpha($col) . '1';
-    $sheet1 .= '<c r="' . $cellRef . '" t="s"><v>' . $col . '</v></c>';
+    $ws2->getColumnDimensionByColumn($i + 1)->setWidth($w);
 }
-$sheet1 .= '</row>';
 
-// 10 baris kosong
-for ($row = 2; $row <= 11; $row++)
+$refAgama = array_map(fn($row) => ['id' => $row['id_agama'],     'nama' => $row['nama_agama']],     $agama);
+$refKelas = array_map(fn($row) => ['id' => $row['id_kelas'],     'nama' => $row['nama_kelas']],     $kelas);
+$refPkrj  = array_map(fn($row) => ['id' => $row['id_pekerjaan'], 'nama' => $row['nama_pekerjaan']], $pekerjaan);
+$maxRows  = max(count($refAgama), count($refKelas), count($refPkrj));
+
+// ── Row 1: Title ──────────────────────────────────────────────────────────────
+$ws2->mergeCells('A1:H1');
+$ws2->setCellValue('A1', 'DAFTAR ID REFERENSI — Jenjang ' . $jenjangUp);
+$ws2->getRowDimension(1)->setRowHeight(22);
+$ws2->getStyle('A1')->applyFromArray([
+    'font'      => ['name' => 'Arial', 'size' => 11, 'bold' => true, 'color' => ['argb' => 'FF' . C_BRAND]],
+    'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['argb' => 'FF' . C_BRAND_BG]],
+    'alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT, 'vertical' => Alignment::VERTICAL_CENTER],
+]);
+
+// ── Row 2: Note ───────────────────────────────────────────────────────────────
+$ws2->mergeCells('A2:H2');
+$ws2->setCellValue('A2', 'Salin nilai kolom ID (angka) ke kolom yang sesuai di sheet Upload.');
+$ws2->getRowDimension(2)->setRowHeight(14);
+$ws2->getStyle('A2')->applyFromArray([
+    'font'      => ['name' => 'Arial', 'size' => 9, 'italic' => true, 'color' => ['argb' => 'FF' . C_NOTE]],
+    'alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT],
+]);
+
+// ── Row 3: Spacer ─────────────────────────────────────────────────────────────
+$ws2->getRowDimension(3)->setRowHeight(8);
+
+// ── Row 4: Group headers ──────────────────────────────────────────────────────
+$ws2->getRowDimension(4)->setRowHeight(22);
+$groupHeaderStyle = [
+    'font'      => ['name' => 'Arial', 'size' => 10, 'bold' => true, 'color' => ['argb' => 'FF' . C_WHITE]],
+    'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['argb' => 'FF' . C_REF_HDR]],
+    'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+];
+$ws2->mergeCells('A4:B4');
+$ws2->setCellValue('A4', 'AGAMA');
+$ws2->getStyle('A4:B4')->applyFromArray($groupHeaderStyle);
+
+$ws2->mergeCells('D4:E4');
+$ws2->setCellValue('D4', 'KELAS ' . $jenjangUp);
+$ws2->getStyle('D4:E4')->applyFromArray($groupHeaderStyle);
+
+$ws2->mergeCells('G4:H4');
+$ws2->setCellValue('G4', 'PEKERJAAN ORANG TUA / WALI');
+$ws2->getStyle('G4:H4')->applyFromArray($groupHeaderStyle);
+
+// ── Row 5: Sub headers ────────────────────────────────────────────────────────
+$ws2->getRowDimension(5)->setRowHeight(18);
+$subStyle = [
+    'font'      => ['name' => 'Arial', 'size' => 10, 'bold' => true, 'color' => ['argb' => 'FF' . C_WHITE]],
+    'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['argb' => 'FF' . C_REF_HDR]],
+    'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+];
+foreach (['A5', 'D5', 'G5'] as $cell)
 {
-    $sheet1 .= '<row r="' . $row . '">';
-    for ($col = 0; $col < count($headers); $col++)
+    $ws2->setCellValue($cell, 'ID');
+    $ws2->getStyle($cell)->applyFromArray($subStyle);
+}
+foreach (['B5', 'E5', 'H5'] as $cell)
+{
+    $ws2->setCellValue($cell, 'Nama');
+    $ws2->getStyle($cell)->applyFromArray($subStyle);
+}
+
+// ── Data rows ─────────────────────────────────────────────────────────────────
+for ($i = 0; $i < $maxRows; $i++)
+{
+    $excelRow = $i + 6; // offset: 5 header rows + 1
+    $ws2->getRowDimension($excelRow)->setRowHeight(18);
+    $isAlt = ($i % 2 === 1);
+
+    // Agama
+    if (isset($refAgama[$i]))
     {
-        $cellRef = numToAlpha($col) . $row;
-        $sheet1 .= '<c r="' . $cellRef . '"><v></v></c>';
+        $ws2->setCellValue('A' . $excelRow, $refAgama[$i]['id']);
+        $ws2->setCellValue('B' . $excelRow, $refAgama[$i]['nama']);
+        $ws2->getStyle('A' . $excelRow)->applyFromArray(refCellStyle(true, $isAlt, true));
+        $ws2->getStyle('B' . $excelRow)->applyFromArray(refCellStyle(false, $isAlt));
     }
-    $sheet1 .= '</row>';
-}
 
-$sheet1 .= '</sheetData></worksheet>';
-file_put_contents($worksheetsDir . '/sheet1.xml', $sheet1);
-
-// 7. SHEET 2: Daftar ID
-$sheet2 = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-    <sheetData>';
-
-$currentRow = 1;
-$stringIndexOffset = count($headers); // Offset untuk shared strings
-
-// Judul besar
-$sheet2 .= '<row r="' . $currentRow . '">';
-$sheet2 .= '<c r="A' . $currentRow . '" t="s"><v>' . $stringIndexOffset . '</v></c>';
-$sheet2 .= '</row>';
-$currentRow += 2;
-
-// Function untuk print tabel referensi
-function addReferenceTable(&$sheet2, &$currentRow, &$stringIndex, $titleIndex, $data, $idCol, $namaCol, $stringIndexOffset)
-{
-    // Judul tabel
-    $sheet2 .= '<row r="' . $currentRow . '">';
-    $sheet2 .= '<c r="A' . $currentRow . '" t="s"><v>' . $titleIndex . '</v></c>';
-    $sheet2 .= '</row>';
-    $currentRow++;
-
-    // Header ID & Nama
-    $sheet2 .= '<row r="' . $currentRow . '">';
-    $sheet2 .= '<c r="A' . $currentRow . '" t="s"><v>' . ($stringIndexOffset + 1) . '</v></c>';
-    $sheet2 .= '<c r="B' . $currentRow . '" t="s"><v>' . ($stringIndexOffset + 2) . '</v></c>';
-    $sheet2 .= '</row>';
-    $currentRow++;
-
-    // Data
-    foreach ($data as $item)
+    // Kelas
+    if (isset($refKelas[$i]))
     {
-        $sheet2 .= '<row r="' . $currentRow . '">';
-        $sheet2 .= '<c r="A' . $currentRow . '"><v>' . $item[$idCol] . '</v></c>';
-        $sheet2 .= '<c r="B' . $currentRow . '" t="s"><v>' . $stringIndex . '</v></c>';
-        $sheet2 .= '</row>';
-        $stringIndex++;
-        $currentRow++;
+        $ws2->setCellValue('D' . $excelRow, $refKelas[$i]['id']);
+        $ws2->setCellValue('E' . $excelRow, $refKelas[$i]['nama']);
+        $ws2->getStyle('D' . $excelRow)->applyFromArray(refCellStyle(true, $isAlt, true));
+        $ws2->getStyle('E' . $excelRow)->applyFromArray(refCellStyle(false, $isAlt));
     }
 
-    $currentRow++; // Spasi
-    return $stringIndex;
-}
-
-// Hitung posisi awal untuk data referensi
-$refStringIndex = $stringIndexOffset + 8; // Mulai setelah semua judul
-
-// Agama - JUDUL UNIK
-$refStringIndex = addReferenceTable($sheet2, $currentRow, $refStringIndex, $stringIndexOffset + 3, $agama, "id_agama", "nama_agama", $stringIndexOffset);
-
-// Kelas - JUDUL UNIK
-$refStringIndex = addReferenceTable($sheet2, $currentRow, $refStringIndex, $stringIndexOffset + 4, $kelas, "id_kelas", "nama_kelas", $stringIndexOffset);
-
-// Semester - JUDUL UNIK
-$refStringIndex = addReferenceTable($sheet2, $currentRow, $refStringIndex, $stringIndexOffset + 5, $semester, "id_semester", "nama_semester", $stringIndexOffset);
-
-// Tahun Pelajaran - JUDUL UNIK
-$refStringIndex = addReferenceTable($sheet2, $currentRow, $refStringIndex, $stringIndexOffset + 6, $tahun, "id_tahun", "tahun", $stringIndexOffset);
-
-// Pekerjaan - JUDUL UNIK
-$refStringIndex = addReferenceTable($sheet2, $currentRow, $refStringIndex, $stringIndexOffset + 7, $pekerjaan, "id_pekerjaan", "nama_pekerjaan", $stringIndexOffset);
-
-$sheet2 .= '</sheetData></worksheet>';
-file_put_contents($worksheetsDir . '/sheet2.xml', $sheet2);
-
-// ==================== BUAT ZIP ====================
-$zip = new ZipArchive();
-$filename = $tempDir . '/template.xlsx';
-
-if ($zip->open($filename, ZipArchive::CREATE) === TRUE)
-{
-    $files = new RecursiveIteratorIterator(
-        new RecursiveDirectoryIterator($tempDir),
-        RecursiveIteratorIterator::LEAVES_ONLY
-    );
-
-    foreach ($files as $name => $file)
+    // Pekerjaan
+    if (isset($refPkrj[$i]))
     {
-        if (!$file->isDir())
-        {
-            $filePath = $file->getRealPath();
-            $relativePath = substr($filePath, strlen($tempDir) + 1);
-            $zip->addFile($filePath, $relativePath);
-        }
+        $ws2->setCellValue('G' . $excelRow, $refPkrj[$i]['id']);
+        $ws2->setCellValue('H' . $excelRow, $refPkrj[$i]['nama']);
+        $ws2->getStyle('G' . $excelRow)->applyFromArray(refCellStyle(true, $isAlt, true));
+        $ws2->getStyle('H' . $excelRow)->applyFromArray(refCellStyle(false, $isAlt));
     }
-    $zip->close();
-
-    // Kirim ke browser
-    header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    header('Content-Disposition: attachment; filename="Template_Siswa_' . $jenjangUp . '_' . date('Y-m-d') . '.xlsx"');
-    header('Content-Length: ' . filesize($filename));
-    header('Cache-Control: no-cache, must-revalidate');
-    header('Pragma: no-cache');
-
-    readfile($filename);
-
-    // Cleanup
-    $files = new RecursiveIteratorIterator(
-        new RecursiveDirectoryIterator($tempDir, RecursiveDirectoryIterator::SKIP_DOTS),
-        RecursiveIteratorIterator::CHILD_FIRST
-    );
-    foreach ($files as $fileinfo)
-    {
-        $fileinfo->isDir() ? rmdir($fileinfo->getRealPath()) : unlink($fileinfo->getRealPath());
-    }
-    rmdir($tempDir);
-
-    exit;
 }
-else
+
+// ─── Output ───────────────────────────────────────────────────────────────────
+$spreadsheet->setActiveSheetIndex(0); // Focus Sheet Upload saat dibuka
+
+$filename = 'Template_Siswa_' . $jenjangUp . '_' . date('Y-m-d') . '.xlsx';
+
+// Pastikan tidak ada output sebelumnya
+if (ob_get_length())
 {
-    die('Gagal membuat file Excel');
+    ob_end_clean();
 }
+
+header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+header('Content-Disposition: attachment; filename="' . rawurlencode($filename) . '"');
+header('Cache-Control: max-age=0');
+header('Pragma: public');
+
+$writer = new Xlsx($spreadsheet);
+$writer->save('php://output');
+exit;

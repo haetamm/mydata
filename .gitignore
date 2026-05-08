@@ -4,3 +4,6 @@ ktp
 uploads
 tailwindcss.exe
 catat.txt
+
+/vendor/
+node_modules

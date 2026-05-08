@@ -19,10 +19,6 @@ $currentPage = basename($_SERVER['PHP_SELF']);
                         <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Level Max</th>
                     <?php endif; ?>
 
-                    <?php if ($currentPage === 'tahun-pelajaran.php'): ?>
-                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Status</th>
-                    <?php endif; ?>
-
                     <th class="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider">Aksi</th>
                 </tr>
             </thead>
@@ -58,48 +54,19 @@ $currentPage = basename($_SERVER['PHP_SELF']);
                                 </td>
                             <?php endif; ?>
 
-                            <?php if ($currentPage === 'tahun-pelajaran.php'): ?>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    <span class="text-xs px-2 py-1 rounded-full <?= $master['is_aktif'] ? 'bg-green-300' : 'bg-red-300' ?>"><?= $master['is_aktif'] ? 'Aktif' : 'Inaktif' ?></span>
-                                </td>
-                            <?php endif; ?>
-
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                 <div class="flex items-center justify-center gap-x-2">
                                     <form method="POST" action="<?= $action ?>"
                                         onsubmit="return confirm('Apakah Anda yakin ingin menghapus master <?= htmlspecialchars($master['nama_master']) ?>?')">
                                         <input type="hidden" name="delete_id" value="<?= $master['id_master'] ?>">
-                                        <button type="submit"
-                                            class="flex items-center cursor-pointer gap-1 px-2 py-1 text-red-600 border border-red-600 rounded
-                                                hover:bg-red-600 hover:text-white transition">
-                                            <i class="fa-solid fa-trash text-sm"></i>
+                                        <button type="submit" <?= btnDisabled($canDelete) ?>
+                                            class="flex items-center gap-1 px-2 py-1  rounded
+                                                <?= btnClass($canDelete, 'bg-red-500 text-white cursor-pointer ') ?>" ">
+                                            <i class=" fa-solid fa-trash text-sm"></i>
                                         </button>
                                     </form>
-
-                                    <!-- Toggle Aktif -->
-                                    <?php if ($currentPage === 'tahun-pelajaran.php'): ?>
-                                        <form method="POST" action="<?= $action ?>">
-
-                                            <input type="hidden" name="toggle_id" value="<?= $master['id_master'] ?>">
-
-                                            <button
-                                                type="submit"
-                                                <?= $master['is_aktif'] ? 'disabled' : '' ?>
-                                                class="relative inline-flex h-5 w-10 items-center rounded-full transition-colors duration-300
-                                                    <?= $master['is_aktif'] ? 'bg-green-500 cursor-not-allowed opacity-70' : 'cursor-pointer bg-gray-300 hover:bg-gray-400' ?>">
-
-                                                <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-300
-                                                            <?= $master['is_aktif'] ? 'translate-x-5' : 'translate-x-1' ?>">
-                                                </span>
-                                            </button>
-
-                                        </form>
-                                    <?php endif; ?>
-
-
                                 </div>
                             </td>
-
                         </tr>
                     <?php endforeach; ?>
                 <?php endif; ?>

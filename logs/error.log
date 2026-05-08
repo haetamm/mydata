@@ -1,0 +1,40 @@
+[2026-05-06 02:15:11] SQLSTATE[HY000] [2002] No connection could be made because the target machine actively refused it
+[2026-05-06 06:26:02] SQLSTATE[42S22]: Column not found: 1054 Unknown column 'a.nama_agam' in 'field list'
+[2026-05-06 10:30:59] SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '0001000010' for key 'siswa_sd.uq_siswa_sd_nisn'
+[2026-05-06 10:31:45] SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '0001000010' for key 'siswa_sd.uq_siswa_sd_nisn'
+[2026-05-06 10:32:06] SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '0001000010' for key 'siswa_sd.uq_siswa_sd_nisn'
+[2026-05-06 10:34:46] SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '100001' for key 'siswa_sd.uq_siswa_sd_nis'
+[2026-05-06 10:35:03] SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '0001000010' for key 'siswa_sd.uq_siswa_sd_nisn'
+[2026-05-06 10:38:15] SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '0001000010' for key 'siswa_sd.uq_siswa_sd_nisn'
+[2026-05-07 09:37:45] SQLSTATE[42S22]: Column not found: 1054 Unknown column 'nama_agam' in 'field list'
+[2026-05-07 10:21:37] Call to a member function prepare() on null
+[2026-05-07 10:22:09] Call to a member function prepare() on null
+[2026-05-07 10:25:59] Call to a member function prepare() on null
+[2026-05-07 10:29:27] Call to a member function prepare() on null
+[2026-05-07 10:35:51] Call to a member function prepare() on null
+[2026-05-07 10:36:44] Call to a member function prepare() on null
+[2026-05-07 10:37:45] Call to a member function prepare() on null
+[2026-05-07 10:37:58] Call to a member function prepare() on null
+[2026-05-07 10:38:07] Call to a member function prepare() on null
+[2026-05-07 10:38:14] Call to a member function prepare() on null
+[2026-05-07 10:39:26] Call to a member function prepare() on null
+[2026-05-07 10:39:52] Call to a member function prepare() on null
+[2026-05-07 11:33:01] SQLSTATE[01000]: Warning: 1265 Data truncated for column 'jenjang' at row 1
+[2026-05-07 11:33:16] SQLSTATE[01000]: Warning: 1265 Data truncated for column 'jenjang' at row 1
+[2026-05-07 11:35:47] SQLSTATE[01000]: Warning: 1265 Data truncated for column 'jenjang' at row 1
+[2026-05-07 11:36:20] SQLSTATE[01000]: Warning: 1265 Data truncated for column 'jenjang' at row 1
+[2026-05-07 11:39:27] SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry 'TK' for key 'master_level_kelas.uq_level_jenjang'
+[2026-05-07 11:41:01] SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry 'TK' for key 'master_level_kelas.uq_level_jenjang'
+[2026-05-07 11:54:22] SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry 'TK' for key 'master_level_kelas.uq_level_jenjang'
+[2026-05-08 03:37:49] SQLSTATE[42S22]: Column not found: 1054 Unknown column 'nam' in 'field list'
+[2026-05-08 03:45:46] SQLSTATE[42S22]: Column not found: 1054 Unknown column 'nama_lengka' in 'field list'
+[2026-05-08 03:47:29] SQLSTATE[42S02]: Base table or view not found: 1146 Table 'dataku.user' doesn't exist
+[2026-05-08 03:48:07] SQLSTATE[42S22]: Column not found: 1054 Unknown column 'nama_lengka' in 'field list'
+[2026-05-08 11:17:28] Call to a member function getAll() on null
+[2026-05-08 13:49:27] SQLSTATE[42S22]: Column not found: 1054 Unknown column 'nama_agam' in 'field list'
+[2026-05-08 13:51:22] array_merge(): Argument #1 must be of type array, null given
+[2026-05-08 13:53:08] array_merge(): Argument #1 must be of type array, null given
+[2026-05-08 13:54:32] array_merge(): Argument #1 must be of type array, null given
+[2026-05-08 13:57:19] array_merge(): Argument #1 must be of type array, null given
+[2026-05-08 13:57:26] array_merge(): Argument #1 must be of type array, null given
+[2026-05-08 21:13:53] SQLSTATE[42S22]: Column not found: 1054 Unknown column 'r.deleted' in 'where clause'

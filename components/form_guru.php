@@ -1,141 +1,254 @@
-<div class="py-6 px-2 md:p-6">
+<?php
+$inp      = fn(string $field) => htmlspecialchars($post[$field] ?? '');
+$err      = fn(string $field) => !empty($errors[$field])
+    ? '<p class="text-red-500 text-xs mt-1.5">' . htmlspecialchars($errors[$field]) . '</p>'
+    : '';
+$hasError = fn(string $field) => !empty($errors[$field])
+    ? 'border-red-500 ring-1 ring-red-200'
+    : 'border-gray-200';
 
-    <form method="POST" class="space-y-10">
-        <!-- DATA PRIBADI -->
-        <div class="border-b pb-8 border-slate-200">
-            <h2 class="text-2xl font-bold text-blue-700 mb-6">Data Pribadi</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="xl:flex xl:items-center">
-                    <label class="block w-full xl:w-[30%] text-sm font-semibold text-gray-700 mb-2">
-                        Nama Lengkap <span class="text-red-500">*</span>
-                    </label>
-                    <div class="w-full">
-                        <input type="text" name="nama" required value="<?= htmlspecialchars($post['nama'] ?? '') ?>"
-                            class="w-full px-4 py-2.5 border <?= !empty($errors['nama']) ? 'border-red-500' : 'border-gray-300' ?> rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                        <?php field_error('nama', $errors); ?>
+// Pilihan jenis kelamin, status pegawai, jenis GTK
+$jenisKelaminOptions = ['L' => 'Laki-laki', 'P' => 'Perempuan'];
+
+$jenisGtkOptions = [
+    'Guru Kelas'    => 'Guru Kelas',
+    'Guru Mapel'    => 'Guru Mapel',
+    'Guru Agama'    => 'Guru Agama Islam',
+    'Guru BK'       => 'Guru BK',
+    'Pend. Jasmani' => 'Pend. Jasmani (PJOK)',
+    'Guru B. Inggris' => 'Guru B. Inggris',
+    'Kepala Sekolah'  => 'Kepala Sekolah',
+    'Wakil KS'        => 'Wakil Kepala Sekolah',
+    'Tenaga Admin'    => 'Tenaga Administrasi',
+];
+
+$statusPegawaiOptions = [
+    'PNS'     => 'PNS',
+    'PPPK'    => 'PPPK',
+    'Honorer' => 'Honorer',
+    'GTT'     => 'GTT (Guru Tidak Tetap)',
+    'Kontrak' => 'Kontrak',
+];
+
+?>
+<form method="POST" class="relative">
+    <input type="hidden" name="action" value="save">
+
+    <div class="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 -z-10"></div>
+
+    <div class="max-w-7xl mx-auto">
+        <div class="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl shadow-indigo-100/50 border border-white/50 overflow-hidden">
+
+
+            <!-- ── SEKSI 1: DATA IDENTITAS ── -->
+            <div class="p-6 sm:p-8 border-b border-slate-100">
+                <div class="flex items-center gap-3 mb-6 pb-2 border-b-2 border-indigo-200">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-200">
+                        <i class="fa-solid fa-id-card text-white text-sm"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-800">Data Identitas Guru</h2>
+                        <p class="text-xs text-slate-400 mt-0.5">Identitas lengkap dan data kepegawaian</p>
                     </div>
                 </div>
 
-                <div class="xl:flex xl:items-center">
-                    <label class="block w-full xl:w-[30%] text-sm font-semibold text-gray-700 mb-2">
-                        NIK <span class="text-red-500">*</span>
-                    </label>
-                    <div class="w-full">
-                        <input type="text" name="nik" required maxlength="16" inputmode="numeric"
-                            value="<?= htmlspecialchars($post['nik'] ?? '') ?>"
-                            class="w-full px-4 py-2.5 border <?= !empty($errors['nik']) ? 'border-red-500' : 'border-gray-300' ?> rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <?php field_error('nik', $errors); ?>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+                    <!-- Nama — full width -->
+                    <div class="lg:col-span-3">
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">
+                            Nama Lengkap <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" name="nama" value="<?= $inp('nama') ?>" <?= $disabled ?>
+                            placeholder="Masukkan nama lengkap guru"
+                            class="w-full px-4 py-3 rounded-xl border <?= $hasError('nama') ?> focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 transition-all duration-200 outline-none">
+                        <?= $err('nama') ?>
                     </div>
-                </div>
 
-                <div class="xl:flex xl:items-center">
-                    <label class="block w-full xl:w-[30%] text-sm font-semibold text-gray-700 mb-2">NUPTK</label>
-                    <input type="text" name="nuptk" maxlength="16" value="<?= htmlspecialchars($post['nuptk'] ?? '') ?>"
-                        class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
+                    <!-- NIK -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">NIK</label>
+                        <input type="text" name="nik" maxlength="16" value="<?= $inp('nik') ?>" <?= $disabled ?>
+                            placeholder="16 digit NIK"
+                            class="w-full px-4 py-3 rounded-xl border <?= $hasError('nik') ?> focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 transition-all duration-200 outline-none">
+                        <?= $err('nik') ?>
+                    </div>
 
-                <div class="xl:flex xl:items-center">
-                    <label class="block w-full xl:w-[30%] text-sm font-semibold text-gray-700 mb-2">
-                        Jenis Kelamin <span class="text-red-500">*</span>
-                    </label>
-                    <div class="w-full">
-                        <select name="jenis_kelamin" required class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <option value="">-- Pilih --</option>
-                            <option value="L" <?= ($post['jenis_kelamin'] ?? '') === 'L' ? 'selected' : '' ?>>Laki-laki</option>
-                            <option value="P" <?= ($post['jenis_kelamin'] ?? '') === 'P' ? 'selected' : '' ?>>Perempuan</option>
+                    <!-- NUPTK -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">NUPTK</label>
+                        <input type="text" name="nuptk" maxlength="20" value="<?= $inp('nuptk') ?>" <?= $disabled ?>
+                            placeholder="Nomor Unik PTK"
+                            class="w-full px-4 py-3 rounded-xl border <?= $hasError('nuptk') ?> focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 transition-all duration-200 outline-none">
+                        <?= $err('nuptk') ?>
+                    </div>
+
+                    <!-- Jenis Kelamin -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">
+                            Jenis Kelamin <span class="text-red-500">*</span>
+                        </label>
+                        <select name="jenis_kelamin" <?= $disabled ?>
+                            class="w-full px-4 py-3 rounded-xl border <?= $hasError('jenis_kelamin') ?> focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 transition-all duration-200 outline-none bg-white">
+                            <option value="">Pilih</option>
+                            <?php foreach ($jenisKelaminOptions as $val => $label): ?>
+                                <option value="<?= $val ?>"
+                                    <?= ($post['jenis_kelamin'] ?? '') === $val ? 'selected' : '' ?>>
+                                    <?= $label ?>
+                                </option>
+                            <?php endforeach; ?>
                         </select>
-                        <?php field_error('jenis_kelamin', $errors); ?>
+                        <?= $err('jenis_kelamin') ?>
                     </div>
-                </div>
 
-                <div class="xl:flex xl:items-center">
-                    <label class="block w-full xl:w-[30%] text-sm font-semibold text-gray-700 mb-2">
-                        Tempat Lahir <span class="text-red-500">*</span>
-                    </label>
-                    <div class="w-full">
-                        <input type="text" name="tempat_lahir" required value="<?= htmlspecialchars($post['tempat_lahir'] ?? '') ?>"
-                            class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <?php field_error('tempat_lahir', $errors); ?>
+                    <!-- Tempat Lahir -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">Tempat Lahir</label>
+                        <input type="text" name="tempat_lahir" value="<?= $inp('tempat_lahir') ?>" <?= $disabled ?>
+                            placeholder="Kota/Kabupaten lahir"
+                            class="w-full px-4 py-3 rounded-xl border <?= $hasError('tempat_lahir') ?> focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 transition-all duration-200 outline-none">
+                        <?= $err('tempat_lahir') ?>
                     </div>
-                </div>
 
-                <div class="xl:flex xl:items-center">
-                    <label class="block w-full xl:w-[30%] text-sm font-semibold text-gray-700 mb-2">
-                        Tanggal Lahir <span class="text-red-500">*</span>
-                    </label>
-                    <div class="w-full">
-                        <input type="date" name="tgl_lahir" required value="<?= $post['tgl_lahir'] ?? '' ?>"
-                            class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <?php field_error('tgl_lahir', $errors); ?>
+                    <!-- Tanggal Lahir -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">Tanggal Lahir</label>
+                        <input type="date" name="tgl_lahir" value="<?= $inp('tgl_lahir') ?>" <?= $disabled ?>
+                            class="w-full px-4 py-3 rounded-xl border <?= $hasError('tgl_lahir') ?> focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 transition-all duration-200 outline-none">
+                        <?= $err('tgl_lahir') ?>
                     </div>
-                </div>
 
-                <div class="xl:flex xl:items-center">
-                    <label class="block w-full xl:w-[30%] text-sm font-semibold text-gray-700 mb-2">
-                        Nama Ibu <span class="text-red-500">*</span>
-                    </label>
-                    <div class="w-full">
-                        <input type="text" name="nama_ibu" required value="<?= htmlspecialchars($post['nama_ibu'] ?? '') ?>"
-                            class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <?php field_error('nama_ibu', $errors); ?>
+                    <!-- Nama Ibu Kandung -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">Nama Ibu Kandung</label>
+                        <input type="text" name="nama_ibu" value="<?= $inp('nama_ibu') ?>" <?= $disabled ?>
+                            placeholder="Nama ibu kandung"
+                            class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 transition-all duration-200 outline-none">
                     </div>
+
                 </div>
             </div>
-            <div class="xl:flex xl:items-center mt-6">
-                <label class=" block w-full xl:w-[13%] text-sm font-medium text-gray-700 mb-1">Alamat <span class="text-red-500">*</span></label>
-                <div class="w-full">
-                    <textarea name="alamat" required rows="3" class="w-full px-4 py-2.5 border <?= !empty($errors['alamat']) ? 'border-red-500' : 'border-gray-300' ?> rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"><?= htmlspecialchars($post['alamat'] ?? '') ?></textarea>
-                    <?php field_error('alamat', $errors); ?>
-                </div>
-            </div>
-        </div>
 
-        <!-- DATA KEPEGAWAIAN -->
-        <div>
-            <h2 class="text-2xl font-bold text-blue-700 mb-6">Data Kepegawaian</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-                <div class="xl:flex xl:items-center">
-                    <label class="block w-full xl:w-[30%] text-sm font-semibold text-gray-700 mb-2">
-                        Status Pegawai <span class="text-red-500">*</span>
-                    </label>
-                    <div class="w-full">
-                        <input type="text" name="status_pegawai" required value="<?= htmlspecialchars($post['status_pegawai'] ?? '') ?>"
-                            class="w-full px-4 py-2.5 border <?= !empty($errors['status_pegawai']) ? 'border-red-500' : 'border-gray-300' ?> rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                        <?php field_error('status_pegawai', $errors); ?>
+            <!-- ── SEKSI 2: DATA KEPEGAWAIAN ── -->
+            <div class="p-6 sm:p-8 border-b border-slate-100 bg-gradient-to-r from-emerald-50/30">
+                <div class="flex items-center gap-3 mb-6 pb-2 border-b-2 border-emerald-200">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-200">
+                        <i class="fa-solid fa-briefcase text-white text-sm"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-800">Data Kepegawaian</h2>
+                        <p class="text-xs text-slate-400 mt-0.5">Informasi jabatan dan status kepegawaian</p>
                     </div>
                 </div>
 
-                <div class="xl:flex xl:items-center">
-                    <label class="block w-full xl:w-[30%] text-sm font-semibold text-gray-700 mb-2">
-                        Jenis GTK <span class="text-red-500">*</span>
-                    </label>
-                    <div class="w-full">
-                        <input type="text" name="jenis_gtk" required value="<?= htmlspecialchars($post['jenis_gtk'] ?? '') ?>"
-                            class="w-full px-4 py-2.5 border <?= !empty($errors['jenis_gtk']) ? 'border-red-500' : 'border-gray-300' ?> rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                        <?php field_error('jenis_gtk', $errors); ?>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+
+                    <!-- Status Pegawai -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">Status Pegawai</label>
+                        <select name="status_pegawai" <?= $disabled ?>
+                            class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 transition-all duration-200 outline-none bg-white">
+                            <option value="">Pilih Status</option>
+                            <?php foreach ($statusPegawaiOptions as $val => $label): ?>
+                                <option value="<?= $val ?>"
+                                    <?= ($post['status_pegawai'] ?? '') === $val ? 'selected' : '' ?>>
+                                    <?= $label ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <!-- Jenis GTK -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">Jenis GTK</label>
+                        <select name="jenis_gtk" <?= $disabled ?>
+                            class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 transition-all duration-200 outline-none bg-white">
+                            <option value="">Pilih Jenis GTK</option>
+                            <?php foreach ($jenisGtkOptions as $val => $label): ?>
+                                <option value="<?= $val ?>"
+                                    <?= ($post['jenis_gtk'] ?? '') === $val ? 'selected' : '' ?>>
+                                    <?= $label ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <!-- Jabatan -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">Jabatan</label>
+                        <input type="text" name="jabatan" value="<?= $inp('jabatan') ?>" <?= $disabled ?>
+                            placeholder="Contoh: Wali Kelas 6A, Waka Kurikulum"
+                            class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 transition-all duration-200 outline-none">
+                    </div>
+
+                    <!-- Tahun Masuk -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">Tahun Masuk</label>
+                        <input type="number" name="tahun_masuk"
+                            min="1970" max="<?= date('Y') ?>"
+                            value="<?= $inp('tahun_masuk') ?>" <?= $disabled ?>
+                            placeholder="Tahun pertama mengajar di sekolah ini"
+                            class="w-full px-4 py-3 rounded-xl border <?= $hasError('tahun_masuk') ?> focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 transition-all duration-200 outline-none">
+                        <?= $err('tahun_masuk') ?>
+                    </div>
+
+                    <!-- Tahun Keluar (read-only, diisi otomatis saat status berubah) -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">
+                            Tahun Keluar
+                            <span class="text-xs font-normal text-slate-400 ml-1">(otomatis)</span>
+                        </label>
+                        <input type="text"
+                            value="<?= $inp('tahun_keluar') ?: '-' ?>"
+                            disabled
+                            class="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-500 outline-none cursor-not-allowed">
+                    </div>
+
+                </div>
+            </div>
+
+
+            <!-- ── SEKSI 3: ALAMAT ── -->
+            <div class="p-6 sm:p-8 border-b border-slate-100 bg-gradient-to-r from-amber-50/30">
+                <div class="flex items-center gap-3 mb-6 pb-2 border-b-2 border-amber-200">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-200">
+                        <i class="fa-solid fa-location-dot text-white text-sm"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-800">Alamat</h2>
+                        <p class="text-xs text-slate-400 mt-0.5">Alamat tempat tinggal guru</p>
                     </div>
                 </div>
 
-                <div class="xl:flex xl:items-center">
-                    <label class="block w-full xl:w-[30%] text-sm font-semibold text-gray-700 mb-2">Jabatan</label>
-                    <input type="text" name="jabatan" value="<?= htmlspecialchars($post['jabatan'] ?? '') ?>"
-                        class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="ex: Wali Kelas 5A">
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">Alamat Lengkap</label>
+                    <textarea name="alamat" rows="4" <?= $disabled ?>
+                        placeholder="Jalan, gang, nomor rumah, RT/RW, dusun, kelurahan, kecamatan, kota/kabupaten"
+                        class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-amber-400 focus:ring-4 focus:ring-amber-100 transition-all duration-200 outline-none resize-none"><?= $inp('alamat') ?></textarea>
                 </div>
+            </div>
+
+
+            <!-- ── TOMBOL AKSI ── -->
+            <div class="p-6 sm:p-8 <?= ($canEdit || $formMode === 'create') ? 'bg-gradient-to-r from-slate-50 to-indigo-50/30' : 'bg-slate-50' ?> flex justify-end gap-3">
+
+                <a href="<?= $back ?>"
+                    class="px-8 py-3 bg-white hover:bg-slate-50 text-slate-700 rounded-xl text-sm font-semibold border border-slate-200 transition flex items-center gap-2">
+                    <i class="fa-solid <?= ($canEdit || $formMode === 'create') ? 'fa-times' : 'fa-arrow-left' ?>"></i>
+                    <?= ($canEdit || $formMode === 'create') ? 'Batal' : 'Kembali' ?>
+                </a>
+
+                <?php if ($canEdit || $formMode === 'create'): ?>
+                    <button type="submit"
+                        class="px-8 py-3 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white rounded-xl text-sm font-semibold transition flex items-center gap-2">
+                        <i class="fa-solid fa-save"></i>
+                        <?= $formMode === 'create' ? 'Tambah Guru' : 'Simpan Perubahan' ?>
+                    </button>
+                <?php endif; ?>
 
             </div>
-        </div>
 
-        <!-- TOMBOL -->
-        <div class="flex justify-end gap-4 pt-8 border-t border-slate-200">
-            <a href="<?= $back ?>"
-                class="px-8 py-3 bg-gray-500 text-white font-medium rounded-lg hover:bg-gray-600 transition">
-                Batal
-            </a>
-            <button type="submit"
-                class="px-8 py-3 bg-linear-to-r from-[#4d58ef] to-blue-400 text-white font-medium rounded-lg hover:bg-blue-700 transition">
-                <?= $buttonLable ?>
-            </button>
         </div>
-    </form>
-</div>
+    </div>
+</form>

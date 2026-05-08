@@ -1,78 +1,121 @@
 <?php
+
+declare(strict_types=1);
+
+require_once 'vendor/autoload.php';
+require_once 'lib/connection.php';
+require_once 'lib/utils.php';
+
+use App\Middleware\PermissionMiddleware;
+use App\Services\KelasService;
+use App\Services\LevelKelasService;
+use App\Services\PermissionService;
+use App\Validation\KelasValidation;
+
 session_start();
-include("connection.php");
-include("services/master.php");
 
-// === 1. CEK LOGIN & HAK AKSES ===
-allowSuperAdminOnly();
+// Guard
+[$menus, $permMap] = PermissionMiddleware::handle($pdo, 'master-kelas');
 
-$pesan = $_GET["pesan"] ?? "";
+$kelasService       = new KelasService($pdo);
+$levelKelasService  = new LevelKelasService($pdo);
+$servicePermission = new PermissionService($pdo);
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['action']) && $_GET['action'] === 'add_kelas')
+$canCreate = $servicePermission->can($permMap, 'master-kelas', 'create');
+$canDelete = $servicePermission->can($permMap, 'master-kelas', 'delete');
+
+$pesan              = $_GET['pesan'] ?? '';
+$errors             = [];
+
+// POST: Tambah pekerjaan
+if (
+    $_SERVER['REQUEST_METHOD'] === 'POST'
+    && isset($_GET['action'])
+    && $_GET['action'] === 'add_kelas'
+    && $canCreate
+)
 {
-    if (isset($_POST['nama_kelas']) && isset($_POST['level_id']))
-    {
-        $nama_kelas = trim($_POST['nama_kelas']);
-        $level_id   = intval($_POST['level_id']);
+    $data = [
+        'nama_kelas'    => trim($_POST['nama_kelas']   ?? ''),
+        'level_id'      => trim($_POST['level_id'] ?? '')
+    ];
+    $errors = KelasValidation::save($data);
 
-        $result = addKelas($nama_kelas, $level_id, $link);
-
-        if ($result['success'])
-        {
-            header("Location: kelas.php?pesan=" . urlencode($result['message']));
-        }
-        else
-        {
-            echo "<script>alert('" . addslashes($result['message']) . "'); window.location.href = 'kelas.php';</script>";
-        }
-        exit;
-    }
-    else
+    if (empty($errors))
     {
-        echo "<script>alert('Nama kelas atau jenjang tidak boleh kosong'); window.location.href = 'kelas.php';</script>";
+        try
+        {
+            $res = $kelasService->addKelas($data['nama_kelas'], (int) $data['level_id']);
+            $_SESSION['swal'] = [
+                'icon'  => $res['success'] ? 'success' : 'error',
+                'title' => $res['success'] ? 'Berhasil!' : 'Gagal',
+                'html'  => $res['message'],
+            ];
+
+            header('Location: kelas.php');
+        }
+        catch (\Throwable $e)
+        {
+            error_log(date('[Y-m-d H:i:s] ') . $e->getMessage() . PHP_EOL, 3, __DIR__ . '/logs/error.log');
+            header('Location: kelas.php?pesan=' . urlencode('Terjadi kesalahan sistem.'));
+        }
         exit;
     }
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_id']))
+// POST: Hapus kelas
+if (
+    $_SERVER['REQUEST_METHOD'] === 'POST'
+    && isset($_POST['delete_id'])
+    && $canDelete
+)
 {
+    $deleteId = (int) $_POST['delete_id'];
     try
     {
-        $result = deleteKelas($_POST['delete_id'], $link);
+        $res = $kelasService->deleteKelas($deleteId);
+        $_SESSION['swal'] = [
+            'icon'  => $res['success'] ? 'success' : 'error',
+            'title' => $res['success'] ? 'Berhasil!' : 'Gagal',
+            'html'  => $res['message'],
+        ];
 
-        if ($result['success'])
-        {
-            header("Location: kelas.php?pesan=" . urlencode($result['message']));
-        }
-        else
-        {
-            echo "<script>alert('" . addslashes($result['message']) . "'); window.location.href = 'kelas.php';</script>";
-        }
-        exit;
+        header('Location: kelas.php');
     }
-    catch (Exception $e)
+    catch (\Throwable $e)
     {
-        echo "<script>alert('Error sistem: " . addslashes($e->getMessage()) . "'); window.location.href = 'kelas.php';</script>";
-        exit;
+        error_log(date('[Y-m-d H:i:s] ') . $e->getMessage() . PHP_EOL, 3, __DIR__ . '/logs/error.log');
+        header('Location: kelas.php?pesan=' . urlencode('Terjadi kesalahan sistem.'));
     }
+    exit;
 }
 
-$levels = $link->query("SELECT id_level, jenjang, level_min, level_max
-                        FROM master_level_kelas
-                        WHERE deleted_at IS NULL
-                        ORDER BY id_level")->fetchAll(PDO::FETCH_ASSOC);
+$dataKelas = [];
+$levels = [];
+$fetchError     = null;
 
-// GET DATA
-$result = getKelas($link);
-$dataKelas   = $result["data"];
-$dataMaster = array_map(function ($item)
+try
 {
-    return [
-        "id_master"   => $item["id_kelas"],
-        "nama_master" => $item["nama_kelas"],
-        "jenjang" => $item["jenjang"],
-    ];
-}, $dataKelas);
+    $dataKelas = $kelasService->getAll();
+    $levels = $levelKelasService->getAll();
+}
+catch (\Throwable $e)
+{
+    $fetchError = 'Terjadi kesalahan dalam mengambil data.';
+    error_log(date('[Y-m-d H:i:s] ') . $e->getMessage() . PHP_EOL, 3, __DIR__ . '/logs/error.log');
+}
+
+$dataMaster = array_map(fn($item) => [
+    "id_master"   => $item["id_kelas"],
+    "nama_master" => $item["nama_kelas"],
+    "jenjang" => $item["jenjang"],
+], $dataKelas);
+
+$err = fn(string $field) => !empty($errors[$field])
+    ? '<p class="text-red-500 text-xs mt-1.5">' . htmlspecialchars($errors[$field]) . '</p>'
+    : '';
+
+$disabled = (!$canCreate) ? 'disabled' : '';
 
 ?>
 
@@ -106,13 +149,13 @@ $dataMaster = array_map(function ($item)
                                 <form method="POST" action="kelas.php?action=add_kelas" class="space-y-3 xs:space-y-0 xs:flex xs:flex-col sm:flex-row gap-3">
                                     <!-- Input Nama Kelas -->
                                     <div class="flex-1">
-                                        <input type="text" name="nama_kelas" placeholder="Masukkan nama kelas" required
+                                        <input type="text" name="nama_kelas" placeholder="Masukkan nama kelas" required <?= $disabled ?>
                                             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base">
                                     </div>
 
                                     <!-- Select Level -->
                                     <div class="flex-1">
-                                        <select name="level_id" required
+                                        <select name="level_id" required <?= $disabled ?>
                                             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base">
                                             <option value="">-- Pilih Jenjang --</option>
                                             <?php foreach ($levels as $lvl): ?>
@@ -125,8 +168,9 @@ $dataMaster = array_map(function ($item)
 
                                     <!-- Button -->
                                     <div class="xs:w-full sm:w-auto">
-                                        <button type="submit"
-                                            class="w-full sm:w-auto px-4 py-2 bg-linear-to-r from-[#4d58ef] to-blue-400 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200 text-sm sm:text-base font-medium">
+                                        <button type="submit" <?= btnDisabled($canCreate) ?>
+                                            class="px-4 py-2 text-white rounded-md
+                                                <?= btnClass($canCreate, 'bg-blue-600 hover:bg-blue-700') ?>" ">
                                             Tambah
                                         </button>
                                     </div>
@@ -135,14 +179,15 @@ $dataMaster = array_map(function ($item)
 
 
                             <!-- Table Data -->
-                            <div class="flex-1 min-h-0">
-                                <?php $action = 'kelas.php';
-                                include("components/table_master.php") ?>
+                            <div class=" flex-1 min-h-0">
+                                            <?php $action = 'kelas.php';
+                                            include("components/table_master.php") ?>
+                                    </div>
                             </div>
-                        </div>
                     </main>
                 </div>
             </div>
         </div>
     </div>
 </div>
+<?php include 'layout/footer.php' ?>

@@ -11,5 +11,6 @@
 
   "intelephense.format.enable": true,
   "intelephense.format.braces": "allman",
-  "php.suggest.basic": false
+  "php.suggest.basic": false,
+  "intelephense.diagnostics.undefinedVariables": "off"
 }

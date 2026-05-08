@@ -1,7 +1,7 @@
 <?php
 $pesan = $pesan ?? ($_GET['pesan'] ?? "");
 if (!empty($pesan)): ?>
-    <div class="relative bg-green-100 border-l-4  border-green-500 text-green-700 p-4 my-6 rounded">
+    <div class="relative bg-green-100 border-l-4  border-green-500 text-green-700 p-4 my-4 rounded">
         <span><?= $pesan ?></span>
         <?php if (isset($_GET['pesan'])): ?>
             <!-- Tombol Close hanya muncul jika pesan dari URL -->
