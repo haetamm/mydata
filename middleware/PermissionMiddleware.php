@@ -31,26 +31,39 @@ class PermissionMiddleware
         string  $forbidden  = 'dashboard.php'
     ): array
     {
-        // Cek login
         if (empty($_SESSION['id_user']))
         {
             header("Location: $loginPage");
             exit;
         }
 
-        $roleId  = $_SESSION['role_id'] ?? '';
+        // ✅ Ambil role_id fresh dari DB, bukan dari session
+        $userService = new \App\Services\UserService($pdo);
+        $freshRoleId = $userService->getFreshRoleId($_SESSION['id_user']);
+
+        // User dihapus / dinonaktifkan → force logout
+        if ($freshRoleId === null)
+        {
+            session_destroy();
+            header("Location: $loginPage");
+            exit;
+        }
+
+        // ✅ Sync session jika role berubah
+        if ($_SESSION['role_id'] !== $freshRoleId)
+        {
+            $_SESSION['role_id'] = $freshRoleId;
+        }
+
         $service = new PermissionService($pdo);
+        $permMap = $service->getPermissionMap($freshRoleId);
+        $menus   = $service->getMenusWithPermissions($freshRoleId);
 
-        $permMap = $service->getPermissionMap($roleId);
-        $menus   = $service->getMenusWithPermissions($roleId);
-
-        // Role dinonaktifkan / dihapus → paksa ke dashboard saja
         if (empty($menus))
         {
             $permMap = [];
             $menus   = self::DASHBOARD_FALLBACK;
 
-            // Kalau lagi akses halaman selain dashboard, redirect
             if ($menuSlug !== null && $menuSlug !== 'dashboard')
             {
                 header("Location: $forbidden");
@@ -60,7 +73,6 @@ class PermissionMiddleware
             return [$menus, $permMap];
         }
 
-        // Guard halaman normal
         if ($menuSlug !== null)
         {
             if (!PermissionService::can($permMap, $menuSlug, $permission))

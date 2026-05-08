@@ -235,6 +235,17 @@ class UserService
         }
     }
 
+    public function getFreshRoleId(string $userId): ?string
+    {
+        $stmt = $this->pdo->prepare("
+            SELECT role_id FROM users
+            WHERE id = ? AND deleted_at IS NULL
+        ");
+        $stmt->execute([$userId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ? $row['role_id'] : null;
+    }
+
     private function buildWhere(array $filter): array
     {
         $conditions = ['u.role_id != ?']; // exclude superadmin
