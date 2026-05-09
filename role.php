@@ -78,7 +78,7 @@ $icon  = 'fa-shield-halved';
                         include 'components/header_page.php' ?>
 
                         <!-- Filter -->
-                        <form method="GET" class="mt-4">
+                        <form method="GET" class="">
                             <div class="bg-white px-1">
                                 <div class="flex flex-col md:flex-row gap-3">
                                     <div class="flex-1 relative">

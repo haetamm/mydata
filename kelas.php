@@ -150,13 +150,13 @@ $disabled = (!$canCreate) ? 'disabled' : '';
                                     <!-- Input Nama Kelas -->
                                     <div class="flex-1">
                                         <input type="text" name="nama_kelas" placeholder="Masukkan nama kelas" required <?= $disabled ?>
-                                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base">
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
                                     </div>
 
                                     <!-- Select Level -->
                                     <div class="flex-1">
                                         <select name="level_id" required <?= $disabled ?>
-                                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base">
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
                                             <option value="">-- Pilih Jenjang --</option>
                                             <?php foreach ($levels as $lvl): ?>
                                                 <option value="<?= $lvl['id_level'] ?>">
@@ -169,7 +169,7 @@ $disabled = (!$canCreate) ? 'disabled' : '';
                                     <!-- Button -->
                                     <div class="xs:w-full sm:w-auto">
                                         <button type="submit" <?= btnDisabled($canCreate) ?>
-                                            class="px-4 py-2 text-white rounded-md
+                                            class="px-4 py-2 text-white rounded-md text-sm
                                                 <?= btnClass($canCreate, 'bg-blue-600 hover:bg-blue-700') ?>" ">
                                             Tambah
                                         </button>

@@ -2,7 +2,7 @@
 $hasMsg   = $pesan || $fetchError;
 $tableH   = $hasMsg ? 'lg:h-[calc(100vh-310px)]' : 'lg:h-[calc(100vh-265px)]';
 ?>
-<div class="hidden md:flex mt-6 <?= $tableH ?> overflow-hidden rounded-t-xl">
+<div class="hidden md:flex mt-4 <?= $tableH ?> overflow-hidden rounded-t-xl">
     <div class="overflow-y-auto w-full h-full">
         <table class="min-w-full bg-white table-fixed">
             <thead class="bg-linear-to-r from-[#4d58ef] to-blue-400 text-white uppercase text-xs tracking-wider sticky top-0 z-10 shadow-md">

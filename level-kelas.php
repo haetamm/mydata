@@ -170,7 +170,7 @@ $disabled = (!$canCreate) ? 'disabled' : '';
 
                                     <div class="xs:w-full sm:w-auto">
                                         <button type="submit" <?= btnDisabled($canCreate) ?>
-                                            class="px-4 py-2 text-white rounded-md
+                                            class="px-4 py-2 text-white rounded-md text-sm
                                                 <?= btnClass($canCreate, 'bg-blue-600 hover:bg-blue-700') ?>" ">
                                             Tambah
                                         </button>

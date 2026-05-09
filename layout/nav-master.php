@@ -18,7 +18,10 @@ $currentPage = basename($_SERVER['PHP_SELF']);
         <ul class="space-y-2">
             <?php foreach ($masterChildren as $item):
                 $route    = $item['route'] ?? '#';
-                $isActive = ($currentPage === $route)
+                $baseRoute = pathinfo($route, PATHINFO_FILENAME);
+                $isActive = str_starts_with($currentPage, $baseRoute);
+
+                $activeClass = $isActive
                     ? 'text-blue-500 bg-gray-100'
                     : 'text-gray-600 hover:bg-gray-100';
                 $icon     = htmlspecialchars($item['icon'] ?? 'fa-circle');
@@ -26,7 +29,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
             ?>
                 <li>
                     <a href="<?= htmlspecialchars($route) ?>"
-                        class="flex items-center justify-start px-4 py-2.5 rounded-lg <?= $isActive ?>">
+                        class="flex items-center justify-start px-4 py-2.5 rounded-lg <?= $activeClass ?>">
                         <i class="fa-solid shrink-0 <?= $icon ?> text-xl lg:mr-3"></i>
                         <span class="hidden lg:block ml-2 text-sm"><?= $name ?></span>
                     </a>

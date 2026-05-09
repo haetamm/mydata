@@ -164,22 +164,30 @@ $subtitle = $canEdit || $formMode === 'create'
 
         <?php include 'layout/sidebar.php' ?>
 
-        <div class="h-screen overflow-auto no-scrollbar">
-            <div class="lg:pt-5 pb-[120px] p-3 sm:p-4 lg:px-3 xs:pb-20 md:pb-5">
-                <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
+        <div class="h-full lg:h-screen overflow-auto no-scrollbar">
+            <div class="lg:min-h-screen lg:bg-slate-100 md:p-2 lg:py-4">
+                <div class="grid grid-cols-6 gap-2 lg:gap-3 h-full lg:h-[calc(100vh-32px)]">
 
-                    <?php include 'components/form_header.php' ?>
+                    <?php include 'layout/nav-master.php' ?>
+                    <div class="col-span-6 lg:col-span-5 bg-white h-screen overflow-auto no-scrollbar">
+                        <div class="lg:pt-5 pb-[120px] p-3 sm:p-4 lg:px-3 xs:pb-20 md:pb-5">
+                            <div class="bg-white rounded-2xl shadow-xl overflow-hidden w-full">
 
-                    <?php if ($formMode === 'edit'): ?>
-                        <?php include 'components/form_status_user.php' ?>
-                    <?php endif; ?>
+                                <?php include 'components/form_header.php' ?>
 
-                    <?php include 'components/form_user.php' ?>
+                                <?php if ($formMode === 'edit'): ?>
+                                    <?php include 'components/form_status_user.php' ?>
+                                <?php endif; ?>
 
+                                <?php include 'components/form_user.php' ?>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
 
 <?php include 'layout/footer.php' ?>
